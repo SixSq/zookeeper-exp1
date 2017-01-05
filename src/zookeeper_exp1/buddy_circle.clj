@@ -2,13 +2,13 @@
   "This namespace creates a circle of ZooKeeper nodes, where each node looks after another node, called its 'buddy'.
   Nodes can come by simply calling 'join-circle', and go as they wish.  The joining node can also provide a special
   function which will be called when a buddy goes away (i.e. client dies or is disconnected from the ZooKeeper
-  cluster). The buddy system (inspied from scuba diving) is in place, such that if the buddy is in trouble (i.e. goes
-  away) it swork in progress can be picked-up by its watcher.
+  cluster). The buddy system (inspired from scuba diving) is in place, such that if the buddy is in trouble (i.e. goes
+  away) it's work in progress can be picked-up by its watcher.
 
   The buddy system is created using a sequenced set of nodes (e.g. n-0000000001). Joining nodes are always added at
   the end of the sequence (i.e. head of the sequence with highest count). Nodes watch after their buddy as their
   predecessor. Buddies are watched over by their successor. This tail (first in the node sequence) of the node
-  sequence wrappes around and has the head (last in the node sequence) as its buddy.
+  sequence wraps around and has the head (last in the node sequence) as its buddy.
 
   As nodes come and go, the buddy system is updated to ensure each node has a buddy and that each buddy has a watcher.
   To do this, we take advantage of the :watcher attribute of ZooKeeper nodes (aka znode) and the event types (e.g.
