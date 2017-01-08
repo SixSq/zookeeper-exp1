@@ -1,7 +1,7 @@
 (ns zookeeper-exp1.test-util
   (:require [zookeeper-exp1.util :refer :all]
+            [zookeeper-exp1.run-state-machine :as rsm]
             [clojure.test :refer :all]
-            [zookeeper-exp1.buddy-circle :refer :all]
             [zookeeper :as zk])
   (:import [org.apache.curator.test TestingServer]))
 
@@ -9,11 +9,11 @@
 
 (defn create-root-znode
   [client]
-  (zk/create client root-znode-path :persistent? true))
+  (zk/create client rsm/root-znode-path :persistent? true))
 
 (defn setup-embedded-zk [f]
   (let [server (TestingServer. port)]
-    (reset! client (connect))
+    (reset! client (zk/connect (str "127.0.0.1:" 2181)))
     (create-root-znode @client)
     (f)
     (.close server)))
