@@ -20,27 +20,27 @@ TODO:
 
 Here's a quick primer to get you going:
 
-1. Start ZooKeeper (after having installed it)
-./bin/zkServer.sh start-foreground
+1. Start ZooKeeper (after having installed it)  
+`./bin/zkServer.sh start-foreground`
 
-2. Create a run structure (the run id in this example is 'run-1235')
-lein run \"create run-1235 {\\\"node1\\\" [1 2 4] \\\"node2\\\" [2]}\"
+2. Create a run structure (the run id in this example is `run-1235`)  
+`lein run "create run-1235 {\"node1\" [1 2 4] \"node2\" [2]}"`
 
-3. View the node structure, in the repl
-(use 'zookeeper-exp1.util :reload-all)(require '[zookeeper-exp1.util :as u])
-(use 'zookeeper-exp1.run-state-machine :reload-all)(require '[zookeeper-exp1.run-state-machine :as ss])
-(def client (u/connect))
-(ss/walk client \"run-1235\")
+3. View the node structure, in the repl  
+`(use 'zookeeper-exp1.util :reload-all)(require '[zookeeper-exp1.util :as u])`  
+`(use 'zookeeper-exp1.run-state-machine :reload-all)(require '[zookeeper-exp1.run-state-machine :as ss])`  
+`(def client (u/connect))`  
+`(ss/walk client "run-1235")`  
 
-4. Launch a few instance of the main program
-lein run \"wait run-1235\"
+4. Launch a few instance of the main program  
+`lein run "wait run-1235"`
 
-5. Simulate that all VMs report completion, in the repl:
-(use 'zookeeper-exp1.run-state-machine :reload-all)(require '[zookeeper-exp1.run-state-machine :as ss])
-(use 'zookeeper-exp1.util :reload-all)(require '[zookeeper-exp1.util :as u])
-(def client (u/connect))
-(for [n [\"node1\" \"node2\"] i [1 2 4]]
-(ss/complete-single-state! client \"n-0000000105\" \"run-1235\" n i \"1\" \"1\"))
+5. Simulate that all VMs report completion, in the repl  
+`(use 'zookeeper-exp1.run-state-machine :reload-all)(require '[zookeeper-exp1.run-state-machine :as ss])`  
+`(use 'zookeeper-exp1.util :reload-all)(require '[zookeeper-exp1.util :as u])`  
+`(def client (u/connect))`  
+`(for [n ["node1" "node2"] i [1 2 4]]  
+(ss/complete-single-state! client "n-0000000105" "run-1235" n i "init" "running"))`
 
 And watch all main programs launched with the 'wait' command acknowledge the state transition. Voilà!
 
