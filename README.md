@@ -2,18 +2,25 @@
 
 This repository is the result of experimentation with ZooKeeper to explore how to eliminate herding, loops and pulling in SlipStream.
 
-The main namspaces are:
+The main namespaces are:
 
-1. zookeeper-exp1.buddy-circle: a collaborative system to ensure micro-services and join and leave a pool, without needing external coordination in the process.
-2. zookeeper-exp1.run_state_machine: a reimplementation of the SlipStream run state machine, providing coordination between the different VMs deployed.
+1. Clojure project including the following main namespaces to model the run state machine:
+   a. zookeeper-exp1.buddy-circle: a collaborative system to ensure micro-services and join and leave a pool, without      needing external coordination in the process.
+   b. zookeeper-exp1.run_state_machine: a reimplementation of the SlipStream run state machine, providing coordination     between the different VMs deployed.
+
+2. Aleph web-socket service and a Python client example to create push notification when a run parameter value changes:
+   a. zookeeper-exp1.service: a simple ring service, with the handler to register a ZooKeeper event corresponding to the
+      requested run parameter, and chaining channels to deliver the event to the websocket client.
+   b. a Python client to open a web socket on the right resource, waiting for the value of the corresponding resource
+      to change.
 
 The unit tests are only partial at this stage.
 
-Support for both boot and leiningen is available. 
+Support for both boot and leiningen is available.
 
 TODO:
 
-1. Hook-up with Aleph, such that state transitions can be delivered to clients via web-sockets. The main program includes a few basic commands to simulate multi micro service deployment.
+1. Extract the buddy-circle, such that other resources can take advantage of it, if needed.
 2. Integrate with the configuration system of SlipStream, to retrieve for example ZooKeeper endpoints.
 
 ## Usage

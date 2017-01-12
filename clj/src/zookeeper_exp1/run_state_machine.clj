@@ -20,8 +20,7 @@
 
   The unit tests are only partial at this stage.
 
-  The namespace has not being hooked with Aleph, such that state transitions can be delivered to clients via 
-  web-sockets. The main program includes a few basic commands to simulate multi micro service deployment.
+  The main program includes a few basic commands to simulate multi micro service deployment.
 
   To discover the internal structure of the state machine, the easiest way is to invoque the walk function.
 
