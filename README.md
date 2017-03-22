@@ -49,7 +49,9 @@ Here's a quick primer to get you going:
 `(for [n ["node1" "node2"] i [1 2 4]]  
 (ss/complete-single-state! client "n-0000000105" "run-1235" n i "init" "running"))`
 
-And watch all main programs launched with the 'wait' command acknowledge the state transition. Voilà!
+And watch all main programs launched with the 'wait' command acknowledge the state transition. 
+
+Voilà!
 
 ## License
 

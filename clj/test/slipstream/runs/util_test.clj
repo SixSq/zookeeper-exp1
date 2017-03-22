@@ -1,15 +1,21 @@
-(ns zookeeper-exp1.test-util
-  (:require [zookeeper-exp1.util :refer :all]
-            [zookeeper-exp1.run-state-machine :as rsm]
+(ns slipstream.zk.util-test
+  (:require [slipstream.zk.util :refer :all]
+            [slipstream.runs.zk.util :as rzu]
+            [slipstream.zk.util :as u]
             [clojure.test :refer :all]
+            [clojure.string :as str]
             [zookeeper :as zk])
   (:import [org.apache.curator.test TestingServer]))
 
 (def client (atom nil))
 
+(defn print-znodes
+  [path]
+  (println (str/join "\n" (u/walk @client path))))
+
 (defn create-root-znode
   [client]
-  (zk/create client rsm/root-znode-path :persistent? true))
+  (zk/create client rzu/runs-znode-path :persistent? true))
 
 (defn setup-embedded-zk [f]
   (let [server (TestingServer. port)]

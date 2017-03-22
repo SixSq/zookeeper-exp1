@@ -1,4 +1,4 @@
-(ns zookeeper-exp1.buddy-circle
+(ns slipstream.buddy-circle.core
   "This namespace creates a circle of ZooKeeper nodes, where each node looks after another node, called its 'buddy'.
   Nodes can come by simply calling 'join-circle', and go as they wish.  The joining node can also provide a special
   function which will be called when a buddy goes away (i.e. client dies or is disconnected from the ZooKeeper
@@ -17,12 +17,16 @@
   As a summary:
   1. When the buddy goes, this watcher covers for it, and then cover the buddy of the buddy instead.
   2. When a new node comes to town (always the last index), the first node makes the last its buddy."
-  (:require [zookeeper-exp1.util :as u]
+  (:require [slipstream.zk.util :as u]
             [zookeeper :as zk]
-            [zookeeper.util :as zutil]))
+            [zookeeper.util :as zutil]
+            [clojure.string :as str]))
 
 (def root-znode-path "/buddy-circle")
-(def nodes-path (str root-znode-path "/nodes"))
+(defn nodes-path
+  [circle]
+  (str root-znode-path "/" circle "/nodes"))
+
 (def transactions-znode-name "transactions")
 
 (defn transactions-znode-path
@@ -30,7 +34,8 @@
   (str root-znode-path "/" transactions-znode-name "/" watcher))
 
 (defn node-from-root-path [path]
-  (.substring path (inc (count nodes-path))))
+  (println path)
+  (last (str/split path #"/")))
 
 (defn- cover-for-buddy
   "Whatever needs to be done when my buddy goes away..."
@@ -61,9 +66,9 @@
   (nth (clojure.string/split path #"/") 3))
 
 (defn get-nodes
-  [client]
+  [client circle]
   (zutil/sort-sequential-nodes
-    (zk/children client nodes-path)))
+    (zk/children client (nodes-path circle))))
 
 ;; Public functions ;;
 
@@ -82,8 +87,9 @@
     2. trigger the successor, who needs to close the gap on the predecesor of the buddy.
    A new node is always added at the head (last), therefore trigger the tail (first) node, such that it updates
    its buddy, since it now needs to point to the new head (last)."
-  [client me buddy clear-transactions-fn {:keys [event-type path]}]
-  (let [nodes (get-nodes client)]
+  [client circle me buddy clear-transactions-fn {:keys [event-type path]}]
+  (let [nodes (get-nodes client)
+        nodes-path (nodes-path circle)]
     (println "\nevent-type:" event-type "path:" path "me:" me "buddy:" buddy)
 
     (when (and (= event-type :NodeDeleted) (= (node-from-root-path path) buddy))
@@ -128,56 +134,48 @@
 
 (defn find-buddy-and-watch-over
   "Buddy is the one I look after (my predecessor)"
-  [client me clear-transactions-fn]
-  (let [nodes (get-nodes client)
-        buddy (predecessor client me nodes)]
+  [client circle me clear-transactions-fn]
+  (let [nodes (get-nodes client circle)
+        buddy (predecessor client me nodes)
+        path (nodes-path circle)]
     (print "I am" me)
     (if (nil? buddy)
       (do
         (println " and I'm the first, so I don't have a buddy :-( (yet!)")
         ; register a watcher so that I can hook-up with my buddy when the next node joins the circle
-        (zk/data client (str nodes-path "/" me) :watcher (partial watch-buddy client me nil clear-transactions-fn)))
+        (zk/data client (str path "/" me) :watcher (partial watch-buddy client me nil clear-transactions-fn)))
       (do
         (println " and my buddy is:" buddy)
         ; register a watcher such that when my buddy goes, I can pick its work and find another buddy
-        (zk/data client (str nodes-path "/" buddy) :watcher (partial watch-buddy client me buddy clear-transactions-fn))
+        (zk/data client (str path "/" buddy) :watcher (partial watch-buddy client me buddy clear-transactions-fn))
         ; register a watcher so that I can hook-up with my buddy when the next node joins the circle
-        (zk/data client (str nodes-path "/" me) :watcher (partial watch-buddy client me buddy clear-transactions-fn))
+        (zk/data client (str path "/" me) :watcher (partial watch-buddy client me buddy clear-transactions-fn))
         ; trigger watcher on the first (tail) node, such that it can update its buddy since it always need to have the
         ; last (head) as a buddy.
-        (u/set-data client (str nodes-path "/" (first nodes)) (str "last node: " me))))))
+        (u/set-data client (str path "/" (first nodes)) (str "last node: " me))))))
 
 (defn join-circle
-  [client clear-transactions-fn]
-  (when-not (zk/exists client nodes-path)
-    (zk/create client nodes-path :persistent? true))
-  (let [me (node-from-root-path (zk/create client (str nodes-path "/n-") :sequential? true :ephemeral? true))]
-    (find-buddy-and-watch-over client me clear-transactions-fn)))
+  [client circle clear-transactions-fn]
+  (let [node-path (nodes-path circle)]
+    (when-not (zk/exists client node-path)
+      (zk/create-all client node-path :persistent? true))
+    (let [me (node-from-root-path (zk/create-all client (str node-path "/n-") :sequential? true :ephemeral? true))]
+      (find-buddy-and-watch-over client circle me clear-transactions-fn)
+      me)))
 
 (defn register-transation
-  "Create a znode to signal the current transactions open by a given watcher (i.e. node).
+  "Create a znode to signal the current transactions open by a given node (i.e. me).
    When the buddy system notices that a buddy is gone, this structure is used to detect
    transactions currently ongoing, such that they can be completed by the buddy."
-  [client watcher item]
-  (zk/create-all client (str (transactions-znode-path watcher) "/" item)))
+  [client me item]
+  (zk/create-all client (str (transactions-znode-path me) "/" item)))
 
 (defn clear-transaction
-  "Create a znode to signal the current transactions open by a given watcher (i.e. node).
+  "Create a znode to signal the current transactions open by a given node (i.e. me).
    When the buddy system notices that a buddy is gone, this structure is used to detect
-   transactions currently ongoing, such that they can be completed by the buddy.
-   watcher is the sequenced node (me) and item the node (e.g. \"runs/run-1234\")."
-  [client watcher item]
-  (let [transactions-path (transactions-znode-path watcher)]
+   transactions currently ongoing, such that they can be completed by the buddy."
+  [client me item]
+  (let [transactions-path (transactions-znode-path me)]
     (zk/delete client (str  transactions-path "/" item))
     (when (zk/exists client transactions-path)
       (zk/delete client transactions-path))))
-
-;; Diagnostics / debugging ;;
-
-(defn walk
-  "Walk the entire tree and print each node"
-  [client path]
-  (println path)
-  (let [children (zk/children client path)]
-    (when children
-      (map walk (map #(str path "/" %) children)))))

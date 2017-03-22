@@ -1,14 +1,17 @@
-(ns zookeeper-exp1.main
+(ns slipstream.main
 "Examples:
 lein run \"create run-1234 {\\\"node1\\\" [1 2 4] \\\"node2\\\" [2]}\"
 lein run \"complete run-1234 node1 1 init running}\"
 "
-  (:require [zookeeper-exp1.run-state-machine :as rsm]
-            [zookeeper-exp1.util :as u]
-            [zookeeper-exp1.buddy-circle :as bc]
-            [zookeeper :as zk]
+  (:require [slipstream.runs.resources.run :as rr]
+            [slipstream.runs.zk.run :as r]
+            [slipstream.runs.zk.state :as s]
+            [slipstream.runs.zk.run-state-machine :as rsm]
+            [slipstream.runs.zk.util :as rzu]
+            [slipstream.zk.util :as u]
+            [slipstream.buddy-circle.core :as bc]
             [clojure.edn :as edn]
-            [clojure.string :as s]
+            [clojure.string :as str]
             [clojure.core.async :as async :refer [<! >! <!! >!! timeout chan alt! alts!! go]]))
 
 (def changed? (atom false))
@@ -16,9 +19,9 @@ lein run \"complete run-1234 node1 1 init running}\"
 (defn on-state-changed
   [client channel {:keys [event-type path]}]
   (try
-    (let [run-id (rsm/run-id-from-path path)
-          state-path (rsm/run-id-path run-id)
-          state (rsm/get-run-state client run-id)]
+    (let [run-id (rzu/run-id-from-path path)
+          state-path (rzu/run-id-path run-id)
+          state (s/get- client run-id)]
       (>!! channel state))
     (catch Exception e (prn "caught exception: " (.getMessage e)))))
 
@@ -39,7 +42,7 @@ lein run \"complete run-1234 node1 1 init running}\"
   "Start a node and register a buddy."
   [& [args]]
   (when args
-    (let [argv (s/split args #" ")
+    (let [argv (str/split args #" ")
           cmd (first argv)
           arg (rest argv)
           client (u/connect)]
@@ -47,8 +50,12 @@ lein run \"complete run-1234 node1 1 init running}\"
         "create" (do
                    (println "Creating nodes...")
                    (let [run-id (first arg)
-                         nodes  (edn/read-string (s/join " " (rest arg)))]
-                     (rsm/create-run client run-id nodes)))
+                         nodes  (edn/read-string (str/join " " (rest arg)))]
+                     (rr/create client run-id nodes)))
+        "walk" (do
+                 (println "Printing run...")
+                 (let [run-id (first arg)]
+                   (rzu/walk-run client run-id)))
         "complete" (do
                      (println "Completing node state...")
                      (let [run-id (first arg)

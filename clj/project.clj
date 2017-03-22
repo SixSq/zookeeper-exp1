@@ -11,6 +11,7 @@
                  [gloss "0.2.6"]
    		           [clj-tuple "0.2.2"]
                  [compojure "1.3.3"]
+                 [cheshire "5.7.0"]
                  [org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
-  :main zookeeper-exp1.main)
+  :main slipstream.main)
