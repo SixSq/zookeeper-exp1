@@ -13,7 +13,7 @@
 (defn get-
   [client run-id]
   (rsm/check-transition-and-throw! client run-id)
-  (s/get- client (rzu/state-znode-path run-id)))
+  (s/get- client run-id))
 
 (defn handler
   [client req]
